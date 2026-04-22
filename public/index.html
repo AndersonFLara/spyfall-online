@@ -6,148 +6,185 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spyfall - HelpCell</title>
+    <title>Spyfall - HelpCell & SPM</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0b0b0b; color: #fff; text-align: center; margin: 0; padding: 10px; }
-        .container { max-width: 500px; margin: 20px auto; background: #161616; padding: 25px; border-radius: 12px; border: 1px solid #333; }
-        h1 { color: #ff4757; text-transform: uppercase; letter-spacing: 2px; }
-        input, select { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
-        button { width: 90%; padding: 15px; background: #ff4757; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .hidden { display: none !important; }
-        .sponsors { margin-top: 30px; padding-top: 20px; border-top: 1px solid #222; }
-        .logo-container img { height: 60px; margin: 0 10px; border-radius: 5px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0b0b0b; color: #fff; text-align: center; margin: 0; padding: 10px; }
+        .container { max-width: 500px; margin: 20px auto; background: #161616; padding: 25px; border-radius: 15px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
+        h1 { color: #ff4757; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; font-size: 2.5em; }
+        
+        /* Inputs e Seletores */
+        input, select { width: 90%; padding: 14px; margin: 10px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; font-size: 16px; outline: none; }
+        input:focus { border-color: #ff4757; }
+        
+        /* Botões */
+        button { width: 95%; padding: 16px; background: #ff4757; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: 0.3s; margin-top: 10px; }
+        button:hover { background: #ff6b81; transform: scale(1.02); }
+        .btn-end { background: #444; margin-top: 25px; }
+
+        /* Patrocinadores */
+        .sponsors { margin-top: 40px; padding-top: 20px; border-top: 1px solid #222; }
+        .sponsors p { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; }
+        .logo-container { display: flex; justify-content: center; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .logo-container img { height: 70px; width: auto; border-radius: 8px; border: 1px solid #222; transition: 0.3s; filter: grayscale(30%); }
+        .logo-container img:hover { filter: grayscale(0%); border-color: #ff4757; transform: translateY(-3px); }
+
+        /* Lista de Jogadores */
         ul { list-style: none; padding: 0; text-align: left; }
-        li { background: #252525; margin: 8px 0; padding: 12px; border-radius: 8px; border-left: 4px solid #ff4757; }
-        .host-badge { background: #ffa502; color: #000; font-size: 10px; padding: 3px 6px; border-radius: 4px; float: right; font-weight: bold; }
-        .spy-config { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-        #locationGuide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 200px; overflow-y: auto; background: #000; padding: 15px; margin-top: 20px; border-radius: 8px; }
-        .loc-item { font-size: 11px; color: #666; text-align: left; }
-        .strikethrough { text-decoration: line-through; color: #ff4757; opacity: 0.5; }
-        .role-card { font-size: 1.5em; font-weight: bold; padding: 30px; border: 2px dashed #ff4757; margin: 20px 0; background: #1a1a1a; border-radius: 10px; }
+        li { background: #222; margin: 10px 0; padding: 15px; border-radius: 10px; border-left: 5px solid #ff4757; display: flex; justify-content: space-between; align-items: center; }
+        .host-badge { background: #ffa502; color: #000; font-size: 11px; padding: 4px 8px; border-radius: 5px; font-weight: bold; }
+        
+        /* Área de Jogo */
+        .role-card { font-size: 1.6em; font-weight: bold; padding: 40px 20px; border: 2px dashed #ff4757; margin: 25px 0; background: #1a1a1a; border-radius: 12px; color: #2ed573; }
+        #locationGuide { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 250px; overflow-y: auto; background: #000; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-top: 20px; }
+        .loc-item { font-size: 12px; color: #777; text-align: left; padding: 4px; }
+        .strikethrough { text-decoration: line-through; color: #ff4757; opacity: 0.4; }
+        
+        .hidden { display: none !important; }
+        #waitMsg { font-style: italic; color: #888; margin-top: 15px; }
     </style>
 </head>
-<body onload="resetApp()">
-    <div class="container">
-        <div id="login">
-            <h1>SPYFALL</h1>
-            <input type="text" id="username" placeholder="Seu Nome">
-            <input type="text" id="room" placeholder="ID da Sala">
-            <button onclick="join()">ENTRAR</button>
-            <div class="sponsors">
-                <div class="logo-container">
-                    <img src="logocostela.jpg" alt="Costela">
-                    <img src="logo-helpcell.png" alt="HelpCell">
-                </div>
-            </div>
-        </div>
+<body>
 
-        <div id="lobby" class="hidden">
-            <h2>SALA: <span id="roomName" style="color: #ff4757;"></span></h2>
-            <div id="hostControls" class="spy-config hidden">
-                <select id="spyCount">
-                    <option value="1">1 Espião</option>
-                    <option value="2">2 Espiões</option>
-                </select>
-                <button onclick="startMission()">INICIAR MISSÃO</button>
-            </div>
-            <ul id="playerList"></ul>
-            <div id="waitMsg">Aguardando o Líder...</div>
-        </div>
+<div class="container">
+    <div id="login">
+        <h1>SPYFALL</h1>
+        <input type="text" id="username" placeholder="Digite seu nome">
+        <input type="text" id="room" placeholder="ID da Sala (Ex: familia)">
+        <button onclick="join()">ENTRAR NA MISSÃO</button>
 
-        <div id="game-area" class="hidden">
-            <div id="roleDisplay" class="role-card"></div>
-            <div id="locationGuide"></div>
-            <button id="endBtn" style="background:#444; margin-top:20px;" class="hidden" onclick="endGame()">ENCERRAR PARTIDA</button>
+        <div class="sponsors">
+            <p>Apoio Técnico</p>
+            <div class="logo-container">
+                <img src="logocostela.jpg" alt="Logo Costela">
+                <img src="logo-helpcell.png" alt="Logo HelpCell">
+            </div>
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        let socket;
-        let myRoom = "";
-        let amIHost = false;
-
-        // Limpa tudo ao carregar a página para evitar lixo de memória
-        function resetApp() {
-            socket = io({
-                reconnection: true,
-                reconnectionAttempts: 5
-            });
-            setupListeners();
-            console.log("App resetado e Socket conectado.");
-        }
-
-        function join() {
-            const user = document.getElementById('username').value.trim();
-            myRoom = document.getElementById('room').value.trim();
-            if(user && myRoom) {
-                socket.emit('joinRoom', { roomId: myRoom, username: user });
-                document.getElementById('roomName').innerText = myRoom;
-                document.getElementById('login').classList.add('hidden');
-                document.getElementById('lobby').classList.remove('hidden');
-            }
-        }
-
-        function startMission() { 
-            const spyCount = parseInt(document.getElementById('spyCount').value);
-            socket.emit('startGame', { roomId: myRoom, spyCount: spyCount }); 
-        }
+    <div id="lobby" class="hidden">
+        <h2 id="roomTitle" style="color: #ff4757;">SALA</h2>
         
-        function endGame() { socket.emit('endGame', myRoom); }
+        <div id="hostControls" class="hidden" style="background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <p style="font-size: 13px; color: #aaa; margin-bottom: 10px;">CONFIGURAÇÕES DO LÍDER</p>
+            <select id="spyCount">
+                <option value="1">1 ESPIÃO</option>
+                <option value="2">2 ESPIÕES</option>
+            </select>
+            <button onclick="startMission()">INICIAR JOGO</button>
+        </div>
 
-        function setupListeners() {
-            socket.on('setHost', (status) => {
-                amIHost = status;
-                updateUI();
-            });
+        <ul id="playerList"></ul>
+        <p id="waitMsg">Aguardando o líder iniciar a partida...</p>
+    </div>
 
-            socket.on('updatePlayers', (data) => {
-                if (socket.id === data.hostId) amIHost = true;
-                document.getElementById('playerList').innerHTML = data.players.map(p => `
-                    <li>👤 ${p.username} ${p.id === data.hostId ? '<span class="host-badge">LÍDER</span>' : ''}</li>
-                `).join('');
-                updateUI();
-            });
+    <div id="game-area" class="hidden">
+        <div id="roleDisplay" class="role-card"></div>
+        <p style="font-size: 13px; color: #888;">Guia de Locais:</p>
+        <div id="locationGuide"></div>
+        <button id="endBtn" class="btn-end hidden" onclick="endGame()">ENCERRAR PARTIDA</button>
+    </div>
+</div>
 
-            socket.on('receiveRole', (data) => {
-                document.getElementById('lobby').classList.add('hidden');
-                document.getElementById('game-area').classList.remove('hidden');
-                const card = document.getElementById('roleDisplay');
-                card.innerText = data.role;
-                card.style.color = data.isSpy ? "#ff4757" : "#2ed573";
-                updateUI();
-                const guide = document.getElementById('locationGuide');
-                guide.innerHTML = data.allLocations.map(loc => {
-                    const isUsed = data.used.includes(loc);
-                    const showStrike = !data.isSpy && isUsed;
-                    return `<div class="loc-item ${showStrike ? 'strikethrough' : ''}">${loc}</div>`;
-                }).join('');
-            });
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io({
+        transports: ['polling', 'websocket'], // Melhora conexão em 4G
+        reconnection: true,
+        reconnectionDelay: 1000
+    });
 
-            socket.on('backToLobby', (spyNames) => {
-                alert("🚨 MISSÃO ENCERRADA!\nEspião(ões): " + spyNames);
-                document.getElementById('game-area').classList.add('hidden');
-                document.getElementById('lobby').classList.remove('hidden');
-                updateUI();
-            });
+    let currentRoom = "";
+    let currentName = "";
+    let amIHost = false;
+
+    function join() {
+        const user = document.getElementById('username').value.trim();
+        const room = document.getElementById('room').value.trim().toLowerCase();
+        
+        if (user && room) {
+            currentName = user;
+            currentRoom = room;
+            socket.emit('joinRoom', { roomId: currentRoom, username: currentName });
+            
+            document.getElementById('roomTitle').innerText = "SALA: " + currentRoom.toUpperCase();
+            document.getElementById('login').classList.add('hidden');
+            document.getElementById('lobby').classList.remove('hidden');
+        } else {
+            alert("Por favor, preencha nome e sala.");
         }
+    }
 
-        function updateUI() {
-            const hostControls = document.getElementById('hostControls');
-            const waitMsg = document.getElementById('waitMsg');
-            const endBtn = document.getElementById('endBtn');
-            const gameVisible = !document.getElementById('game-area').classList.contains('hidden');
+    function startMission() {
+        const count = parseInt(document.getElementById('spyCount').value);
+        socket.emit('startGame', { roomId: currentRoom, spyCount: count });
+    }
 
-            if (amIHost) {
-                hostControls.classList.toggle('hidden', gameVisible);
-                waitMsg.classList.add('hidden');
-                if (gameVisible) endBtn.classList.remove('hidden');
-            } else {
-                hostControls.classList.add('hidden');
-                waitMsg.classList.toggle('hidden', gameVisible);
-                endBtn.classList.add('hidden');
-            }
+    function endGame() {
+        if(confirm("Deseja realmente encerrar a partida?")) {
+            socket.emit('endGame', currentRoom);
         }
-    </script>
+    }
+
+    // Listeners do Servidor
+    socket.on('setHost', (status) => {
+        amIHost = status;
+        updateUI();
+    });
+
+    socket.on('updatePlayers', (data) => {
+        if (socket.id === data.hostId) amIHost = true;
+        
+        const list = document.getElementById('playerList');
+        list.innerHTML = data.players.map(p => `
+            <li>
+                <span>👤 ${p.username}</span>
+                ${p.id === data.hostId ? '<span class="host-badge">LÍDER</span>' : ''}
+            </li>
+        `).join('');
+        
+        updateUI();
+    });
+
+    socket.on('receiveRole', (data) => {
+        document.getElementById('lobby').classList.add('hidden');
+        document.getElementById('game-area').classList.remove('hidden');
+        
+        const card = document.getElementById('roleDisplay');
+        card.innerText = data.role;
+        card.style.color = data.isSpy ? "#ff4757" : "#2ed573";
+        
+        const guide = document.getElementById('locationGuide');
+        guide.innerHTML = data.allLocations.map(loc => {
+            const isUsed = data.used.includes(loc);
+            const strike = !data.isSpy && isUsed;
+            return `<div class="loc-item ${strike ? 'strikethrough' : ''}">${loc}</div>`;
+        }).join('');
+
+        updateUI();
+    });
+
+    socket.on('backToLobby', (spyNames) => {
+        alert("🚨 MISSÃO FINALIZADA!\nEspião(ões): " + spyNames);
+        document.getElementById('game-area').classList.add('hidden');
+        document.getElementById('lobby').classList.remove('hidden');
+        updateUI();
+    });
+
+    function updateUI() {
+        const isGame = !document.getElementById('game-area').classList.contains('hidden');
+        
+        document.getElementById('hostControls').classList.toggle('hidden', !amIHost || isGame);
+        document.getElementById('waitMsg').classList.toggle('hidden', amIHost || isGame);
+        document.getElementById('endBtn').classList.toggle('hidden', !amIHost || !isGame);
+    }
+
+    // Auto-reconexão se a internet cair
+    socket.on('connect', () => {
+        if (currentRoom && currentName) {
+            socket.emit('joinRoom', { roomId: currentRoom, username: currentName });
+        }
+    });
+</script>
+
 </body>
 </html>
