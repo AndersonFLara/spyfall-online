@@ -28,14 +28,11 @@ let usedLocations = [];
 io.on('connection', (socket) => {
     socket.on('joinRoom', ({ roomId, username }) => {
         socket.join(roomId);
-        
         if (!rooms[roomId]) {
-            rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id };
+            rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id, currentSpy: "" };
         }
-        
         rooms[roomId].players.push({ id: socket.id, username });
 
-        // Se eu sou o host, o servidor me avisa diretamente
         if (rooms[roomId].hostId === socket.id) {
             socket.emit('setHost', true);
         }
@@ -51,10 +48,14 @@ io.on('connection', (socket) => {
         if (room && socket.id === room.hostId && room.players.length >= 3) {
             let available = LOCATIONS.filter(loc => !usedLocations.includes(loc));
             if (available.length === 0) { usedLocations = []; available = LOCATIONS; }
+
             const location = available[Math.floor(Math.random() * available.length)];
             usedLocations.push(location);
+            
             const spyIndex = Math.floor(Math.random() * room.players.length);
+            room.currentSpy = room.players[spyIndex].username; // Salva o nome do espião
             room.gameStarted = true;
+
             room.players.forEach((player, index) => {
                 io.to(player.id).emit('receiveRole', {
                     role: (index === spyIndex) ? "🕵️ VOCÊ É O ESPIÃO!" : `📍 LOCAL: ${location}`,
@@ -69,8 +70,9 @@ io.on('connection', (socket) => {
     socket.on('endGame', (roomId) => {
         const room = rooms[roomId];
         if (room && socket.id === room.hostId) {
+            const spyName = room.currentSpy;
             room.gameStarted = false;
-            io.to(roomId).emit('backToLobby');
+            io.to(roomId).emit('backToLobby', spyName); // Envia o nome do espião no encerramento
         }
     });
 
@@ -87,4 +89,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Rodando em ${PORT}`));
+server.listen(PORT, () => console.log(`Spyfall rodando na porta ${PORT}`));
