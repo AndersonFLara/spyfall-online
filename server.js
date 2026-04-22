@@ -29,7 +29,7 @@ io.on('connection', (socket) => {
     socket.on('joinRoom', ({ roomId, username }) => {
         socket.join(roomId);
         if (!rooms[roomId]) {
-            rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id, currentSpy: "" };
+            rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id, currentSpies: [] };
         }
         rooms[roomId].players.push({ id: socket.id, username });
 
@@ -43,7 +43,7 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('startGame', (roomId) => {
+    socket.on('startGame', ({ roomId, spyCount }) => {
         const room = rooms[roomId];
         if (room && socket.id === room.hostId && room.players.length >= 3) {
             let available = LOCATIONS.filter(loc => !usedLocations.includes(loc));
@@ -52,14 +52,22 @@ io.on('connection', (socket) => {
             const location = available[Math.floor(Math.random() * available.length)];
             usedLocations.push(location);
             
-            const spyIndex = Math.floor(Math.random() * room.players.length);
-            room.currentSpy = room.players[spyIndex].username; // Salva o nome do espião
+            // Sorteio de Espiões
+            let indices = Array.from({length: room.players.length}, (_, i) => i);
+            let spyIndices = [];
+            for(let i = 0; i < spyCount && indices.length > 0; i++) {
+                let randIndex = Math.floor(Math.random() * indices.length);
+                spyIndices.push(indices.splice(randIndex, 1)[0]);
+            }
+
+            room.currentSpies = spyIndices.map(i => room.players[i].username);
             room.gameStarted = true;
 
             room.players.forEach((player, index) => {
+                const isSpy = spyIndices.includes(index);
                 io.to(player.id).emit('receiveRole', {
-                    role: (index === spyIndex) ? "🕵️ VOCÊ É O ESPIÃO!" : `📍 LOCAL: ${location}`,
-                    isSpy: (index === spyIndex),
+                    role: isSpy ? "🕵️ VOCÊ É O ESPIÃO!" : `📍 LOCAL: ${location}`,
+                    isSpy: isSpy,
                     allLocations: LOCATIONS,
                     used: usedLocations
                 });
@@ -70,9 +78,9 @@ io.on('connection', (socket) => {
     socket.on('endGame', (roomId) => {
         const room = rooms[roomId];
         if (room && socket.id === room.hostId) {
-            const spyName = room.currentSpy;
+            const spyNames = room.currentSpies.join(" e ");
             room.gameStarted = false;
-            io.to(roomId).emit('backToLobby', spyName); // Envia o nome do espião no encerramento
+            io.to(roomId).emit('backToLobby', spyNames);
         }
     });
 
@@ -89,4 +97,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Spyfall rodando na porta ${PORT}`));
+server.listen(PORT, () => console.log(`Servidor rodando em ${PORT}`));
