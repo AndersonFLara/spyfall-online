@@ -3,33 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spyfall Online - Edição Pro</title>
+    <title>Spyfall Online - Multi-Spy</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b0b0b; color: #fff; text-align: center; margin: 0; padding: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0b0b; color: #fff; text-align: center; margin: 0; padding: 10px; }
         .container { max-width: 500px; margin: 20px auto; background: #161616; padding: 25px; border-radius: 12px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         h1 { color: #ff4757; text-transform: uppercase; letter-spacing: 2px; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
-        button { width: 90%; padding: 15px; background: #ff4757; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: 0.2s; }
-        button:hover { background: #ff6b81; transform: translateY(-2px); }
-        
-        /* Patrocinadores */
+        input, select { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
+        button { width: 90%; padding: 15px; background: #ff4757; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; }
         .sponsors { margin-top: 40px; padding-top: 20px; border-top: 1px solid #222; }
-        .sponsors p { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; }
-        .logo-container { display: flex; justify-content: center; gap: 30px; align-items: center; flex-wrap: wrap; }
-        .logo-container img { height: 70px; width: auto; filter: grayscale(20%); transition: 0.3s; border-radius: 8px; border: 1px solid #222; cursor: pointer; }
-        .logo-container img:hover { filter: grayscale(0%); transform: scale(1.05); border-color: #ff4757; box-shadow: 0 0 15px rgba(255, 71, 87, 0.3); }
-
-        .btn-end { background: #444 !important; margin-top: 25px; }
+        .logo-container img { height: 60px; width: auto; margin: 0 15px; border-radius: 5px; }
         .hidden { display: none !important; }
         ul { list-style: none; padding: 0; text-align: left; }
         li { background: #252525; margin: 8px 0; padding: 12px; border-radius: 8px; border-left: 4px solid #ff4757; }
         .host-badge { background: #ffa502; color: #000; font-size: 10px; padding: 3px 6px; border-radius: 4px; float: right; font-weight: bold; }
-        #locationGuide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 220px; overflow-y: auto; background: #000; padding: 15px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; }
+        #locationGuide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 200px; overflow-y: auto; background: #000; padding: 15px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; }
         .loc-item { font-size: 11px; color: #666; text-align: left; }
         .strikethrough { text-decoration: line-through; color: #ff4757; opacity: 0.5; }
         .role-card { font-size: 1.5em; font-weight: bold; padding: 30px; border: 2px dashed #ff4757; margin: 20px 0; background: #1a1a1a; border-radius: 10px; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #ff4757; border-radius: 5px; }
+        .spy-config { background: #222; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -37,34 +28,36 @@
         <div id="login">
             <h1>SPYFALL</h1>
             <input type="text" id="username" placeholder="Seu Nome">
-            <input type="text" id="room" placeholder="ID da Sala (Letras ou Números)">
+            <input type="text" id="room" placeholder="ID da Sala">
             <button onclick="join()">ENTRAR NA REDE</button>
-
             <div class="sponsors">
-                <p>Apoiadores:</p>
                 <div class="logo-container">
-                    <a href="https://google.com" target="_blank">
-                        <img src="logocostela.jpg" alt="Logo Costela">
-                    </a>
-                    <a href="https://google.com" target="_blank">
-                        <img src="logo-helpcell.png" alt="Logo HelpCell">
-                    </a>
+                    <img src="logocostela.jpg" alt="Logo Costela">
+                    <img src="logo-helpcell.png" alt="Logo HelpCell">
                 </div>
             </div>
         </div>
 
         <div id="lobby" class="hidden">
             <h2>SALA: <span id="roomName" style="color: #ff4757;"></span></h2>
+            
+            <div id="hostControls" class="spy-config hidden">
+                <label style="font-size: 13px; color: #888;">Quantidade de Espiões:</label><br>
+                <select id="spyCount">
+                    <option value="1">1 Espião</option>
+                    <option value="2">2 Espiões</option>
+                </select>
+                <button onclick="start()">INICIAR MISSÃO</button>
+            </div>
+
             <ul id="playerList"></ul>
-            <button id="startBtn" class="hidden" onclick="start()">INICIAR MISSÃO</button>
-            <div id="waitMsg">Aguardando o Líder da Sala...</div>
+            <div id="waitMsg">Aguardando o Líder...</div>
         </div>
 
         <div id="game-area" class="hidden">
             <div id="roleDisplay" class="role-card"></div>
-            <p id="gameHint" style="color: #888; font-size: 14px;"></p>
             <div id="locationGuide"></div>
-            <button id="endBtn" class="btn-end hidden" onclick="endGame()">ENCERRAR PARTIDA</button>
+            <button id="endBtn" style="background:#444; margin-top:20px;" class="hidden" onclick="endGame()">ENCERRAR PARTIDA</button>
         </div>
     </div>
 
@@ -85,7 +78,11 @@
             }
         }
 
-        function start() { socket.emit('startGame', myRoom); }
+        function start() { 
+            const spyCount = parseInt(document.getElementById('spyCount').value);
+            socket.emit('startGame', { roomId: myRoom, spyCount: spyCount }); 
+        }
+        
         function endGame() { socket.emit('endGame', myRoom); }
 
         socket.on('setHost', (status) => {
@@ -102,17 +99,17 @@
         });
 
         function checkHostButtons() {
-            const startBtn = document.getElementById('startBtn');
+            const hostControls = document.getElementById('hostControls');
             const waitMsg = document.getElementById('waitMsg');
             const endBtn = document.getElementById('endBtn');
             const gameVisible = !document.getElementById('game-area').classList.contains('hidden');
 
             if (amIHost) {
-                startBtn.classList.toggle('hidden', gameVisible);
+                hostControls.classList.toggle('hidden', gameVisible);
                 waitMsg.classList.add('hidden');
                 if (gameVisible) endBtn.classList.remove('hidden');
             } else {
-                startBtn.classList.add('hidden');
+                hostControls.classList.add('hidden');
                 waitMsg.classList.remove('hidden');
                 endBtn.classList.add('hidden');
             }
@@ -121,17 +118,10 @@
         socket.on('receiveRole', (data) => {
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('game-area').classList.remove('hidden');
-            
             const card = document.getElementById('roleDisplay');
             card.innerText = data.role;
             card.style.color = data.isSpy ? "#ff4757" : "#2ed573";
-
-            document.getElementById('gameHint').innerText = data.isSpy ? 
-                "Tente descobrir o local fazendo perguntas discretas!" : 
-                "Descubra quem é o infiltrado!";
-
             checkHostButtons();
-
             const guide = document.getElementById('locationGuide');
             guide.innerHTML = data.allLocations.map(loc => {
                 const isUsed = data.used.includes(loc);
@@ -140,8 +130,8 @@
             }).join('');
         });
 
-        socket.on('backToLobby', (spyName) => {
-            alert("🚨 PARTIDA ENCERRADA!\nO espião infiltrado era: " + spyName);
+        socket.on('backToLobby', (spyNames) => {
+            alert("🚨 MISSÃO ENCERRADA!\nEspião(ões): " + spyNames);
             document.getElementById('game-area').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
             checkHostButtons();
