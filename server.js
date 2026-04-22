@@ -1,15 +1,15 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(__dirname + '/public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 let rooms = {};
-
 const LOCATIONS = [
     "Avião", "Banco", "Catedral", "Circo", "Hospital", "Hotel", "Submarino", "Estação Espacial", "Base Militar", "Cassino",
     "Embaixada", "Restaurante", "Teatro", "Universidade", "Escola", "Zoológico", "Delegacia", "Estação de Trem", "Porto", "Aeroporto",
@@ -32,11 +32,7 @@ io.on('connection', (socket) => {
             rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id };
         }
         rooms[roomId].players.push({ id: socket.id, username });
-        
-        io.to(roomId).emit('updatePlayers', {
-            players: rooms[roomId].players,
-            hostId: rooms[roomId].hostId
-        });
+        io.to(roomId).emit('updatePlayers', { players: rooms[roomId].players, hostId: rooms[roomId].hostId });
     });
 
     socket.on('startGame', (roomId) => {
