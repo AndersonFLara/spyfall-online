@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spyfall Pro</title>
+    <title>Spyfall Pro - Host Fix</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #fff; text-align: center; margin: 0; padding: 10px; }
         .container { max-width: 600px; margin: 20px auto; background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #333; }
         h1 { color: #e74c3c; }
         input { width: 85%; padding: 12px; margin: 8px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
         button { width: 90%; padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn-end { background: #444; margin-top: 20px; }
-        .hidden { display: none; }
+        .btn-end { background: #444 !important; margin-top: 20px; }
+        .hidden { display: none !important; }
         ul { list-style: none; padding: 0; }
         li { background: #252525; margin: 8px 0; padding: 12px; border-radius: 8px; text-align: left; border-left: 4px solid #e74c3c; }
         .host-badge { background: #f1c40f; color: #000; font-size: 10px; padding: 3px 6px; border-radius: 4px; float: right; font-weight: bold; }
@@ -19,8 +19,6 @@
         .loc-item { font-size: 12px; color: #888; text-align: left; }
         .strikethrough { text-decoration: line-through; color: #e74c3c; opacity: 0.4; }
         .role-card { font-size: 1.6em; font-weight: bold; padding: 30px; border: 3px dashed #e74c3c; margin: 20px 0; border-radius: 12px; background: #222; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #e74c3c; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -70,12 +68,24 @@
         function endGame() { socket.emit('endGame', myRoom); }
 
         socket.on('updatePlayers', (data) => {
+            // Atualiza se eu sou o host baseado no ID enviado pelo servidor
             amIHost = (socket.id === data.hostId);
+            
             document.getElementById('playerList').innerHTML = data.players.map(p => `
                 <li>🕵️ ${p.username} ${p.id === data.hostId ? '<span class="host-badge">HOST</span>' : ''}</li>
             `).join('');
-            document.getElementById('hostControls').classList.toggle('hidden', !amIHost);
-            document.getElementById('waitMsg').classList.toggle('hidden', amIHost);
+
+            // Mostra o botão de iniciar apenas para o Host no Lobby
+            const hostControls = document.getElementById('hostControls');
+            const waitMsg = document.getElementById('waitMsg');
+            
+            if (amIHost) {
+                hostControls.classList.remove('hidden');
+                waitMsg.classList.add('hidden');
+            } else {
+                hostControls.classList.add('hidden');
+                waitMsg.classList.remove('hidden');
+            }
         });
 
         socket.on('receiveRole', (data) => {
@@ -86,16 +96,21 @@
             card.innerText = data.role;
             card.style.color = data.isSpy ? "#e74c3c" : "#2ecc71";
 
-            const hint = document.getElementById('gameHint');
-            hint.innerText = data.isSpy ? "Descubra o local sem ser pego!" : "Ache o espião antes que ele descubra onde vocês estão!";
+            document.getElementById('gameHint').innerText = data.isSpy ? 
+                "Descubra o local sem ser pego!" : 
+                "Ache o espião antes que ele descubra onde vocês estão!";
 
-            document.getElementById('endBtn').classList.toggle('hidden', !amIHost);
+            // Botão de encerrar partida aparece apenas para o Host durante o jogo
+            const endBtn = document.getElementById('endBtn');
+            if (amIHost) {
+                endBtn.classList.remove('hidden');
+            } else {
+                endBtn.classList.add('hidden');
+            }
 
-            // LOGICA DA LISTA: Se for espião, NÃO risca nada!
             const guide = document.getElementById('locationGuide');
             guide.innerHTML = data.allLocations.map(loc => {
                 const used = data.used.includes(loc);
-                // Se for espião, a classe 'strikethrough' nunca é aplicada
                 const shouldStrike = !data.isSpy && used;
                 return `<div class="loc-item ${shouldStrike ? 'strikethrough' : ''}">${loc}</div>`;
             }).join('');
