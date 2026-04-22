@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spyfall Pro - Host Fix</title>
+    <title>Spyfall - Versão Final</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #fff; text-align: center; margin: 0; padding: 10px; }
-        .container { max-width: 600px; margin: 20px auto; background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #333; }
-        h1 { color: #e74c3c; }
-        input { width: 85%; padding: 12px; margin: 8px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
-        button { width: 90%; padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn-end { background: #444 !important; margin-top: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0b0b; color: #fff; text-align: center; margin: 0; padding: 10px; }
+        .container { max-width: 500px; margin: 20px auto; background: #161616; padding: 25px; border-radius: 12px; border: 1px solid #333; }
+        h1 { color: #ff4757; text-transform: uppercase; }
+        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
+        button { width: 90%; padding: 15px; background: #ff4757; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-end { background: #555 !important; margin-top: 25px; }
         .hidden { display: none !important; }
-        ul { list-style: none; padding: 0; }
-        li { background: #252525; margin: 8px 0; padding: 12px; border-radius: 8px; text-align: left; border-left: 4px solid #e74c3c; }
-        .host-badge { background: #f1c40f; color: #000; font-size: 10px; padding: 3px 6px; border-radius: 4px; float: right; font-weight: bold; }
-        #locationGuide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 250px; overflow-y: auto; background: #111; padding: 15px; margin-top: 20px; border-radius: 10px; border: 1px solid #333; }
-        .loc-item { font-size: 12px; color: #888; text-align: left; }
-        .strikethrough { text-decoration: line-through; color: #e74c3c; opacity: 0.4; }
-        .role-card { font-size: 1.6em; font-weight: bold; padding: 30px; border: 3px dashed #e74c3c; margin: 20px 0; border-radius: 12px; background: #222; }
+        ul { list-style: none; padding: 0; text-align: left; }
+        li { background: #252525; margin: 8px 0; padding: 12px; border-radius: 8px; border-left: 4px solid #ff4757; }
+        .host-badge { background: #ffa502; color: #000; font-size: 10px; padding: 3px 6px; border-radius: 4px; float: right; font-weight: bold; }
+        #locationGuide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 220px; overflow-y: auto; background: #000; padding: 15px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; }
+        .loc-item { font-size: 11px; color: #666; }
+        .strikethrough { text-decoration: line-through; color: #ff4757; opacity: 0.5; }
+        .role-card { font-size: 1.5em; font-weight: bold; padding: 30px; border: 2px dashed #ff4757; margin: 20px 0; background: #1a1a1a; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -31,17 +31,14 @@
         </div>
 
         <div id="lobby" class="hidden">
-            <h2>Sala: <span id="roomName" style="color: #e74c3c;"></span></h2>
+            <h2>SALA: <span id="roomName" style="color: #ff4757;"></span></h2>
             <ul id="playerList"></ul>
-            <div id="hostControls" class="hidden">
-                <button onclick="start()">INICIAR MISSÃO</button>
-            </div>
-            <div id="waitMsg">Aguardando o Host...</div>
+            <button id="startBtn" class="hidden" onclick="start()">INICIAR JOGO</button>
+            <div id="waitMsg">Aguardando o Líder...</div>
         </div>
 
         <div id="game-area" class="hidden">
             <div id="roleDisplay" class="role-card"></div>
-            <p id="gameHint" style="color: #888; font-size: 14px;"></p>
             <div id="locationGuide"></div>
             <button id="endBtn" class="btn-end hidden" onclick="endGame()">ENCERRAR PARTIDA</button>
         </div>
@@ -54,10 +51,10 @@
         let amIHost = false;
 
         function join() {
-            const name = document.getElementById('username').value;
+            const user = document.getElementById('username').value;
             myRoom = document.getElementById('room').value;
-            if(name && myRoom) {
-                socket.emit('joinRoom', { roomId: myRoom, username: name });
+            if(user && myRoom) {
+                socket.emit('joinRoom', { roomId: myRoom, username: user });
                 document.getElementById('roomName').innerText = myRoom;
                 document.getElementById('login').classList.add('hidden');
                 document.getElementById('lobby').classList.remove('hidden');
@@ -67,26 +64,40 @@
         function start() { socket.emit('startGame', myRoom); }
         function endGame() { socket.emit('endGame', myRoom); }
 
+        // Servidor confirmando que VOCÊ é o Host
+        socket.on('setHost', (status) => {
+            amIHost = status;
+            checkHostButtons();
+        });
+
         socket.on('updatePlayers', (data) => {
-            // Atualiza se eu sou o host baseado no ID enviado pelo servidor
-            amIHost = (socket.id === data.hostId);
+            // Se o host atual saiu e eu sou o novo host (primeiro da lista)
+            if (socket.id === data.hostId) amIHost = true;
             
             document.getElementById('playerList').innerHTML = data.players.map(p => `
-                <li>🕵️ ${p.username} ${p.id === data.hostId ? '<span class="host-badge">HOST</span>' : ''}</li>
+                <li>👤 ${p.username} ${p.id === data.hostId ? '<span class="host-badge">LÍDER</span>' : ''}</li>
             `).join('');
-
-            // Mostra o botão de iniciar apenas para o Host no Lobby
-            const hostControls = document.getElementById('hostControls');
-            const waitMsg = document.getElementById('waitMsg');
             
-            if (amIHost) {
-                hostControls.classList.remove('hidden');
-                waitMsg.classList.add('hidden');
-            } else {
-                hostControls.classList.add('hidden');
-                waitMsg.classList.remove('hidden');
-            }
+            checkHostButtons();
         });
+
+        function checkHostButtons() {
+            const startBtn = document.getElementById('startBtn');
+            const waitMsg = document.getElementById('waitMsg');
+            const endBtn = document.getElementById('endBtn');
+
+            if (amIHost) {
+                startBtn.classList.remove('hidden');
+                waitMsg.classList.add('hidden');
+                if (!document.getElementById('game-area').classList.contains('hidden')) {
+                    endBtn.classList.remove('hidden');
+                }
+            } else {
+                startBtn.classList.add('hidden');
+                waitMsg.classList.remove('hidden');
+                endBtn.classList.add('hidden');
+            }
+        }
 
         socket.on('receiveRole', (data) => {
             document.getElementById('lobby').classList.add('hidden');
@@ -94,31 +105,22 @@
             
             const card = document.getElementById('roleDisplay');
             card.innerText = data.role;
-            card.style.color = data.isSpy ? "#e74c3c" : "#2ecc71";
+            card.style.color = data.isSpy ? "#ff4757" : "#2ed573";
 
-            document.getElementById('gameHint').innerText = data.isSpy ? 
-                "Descubra o local sem ser pego!" : 
-                "Ache o espião antes que ele descubra onde vocês estão!";
-
-            // Botão de encerrar partida aparece apenas para o Host durante o jogo
-            const endBtn = document.getElementById('endBtn');
-            if (amIHost) {
-                endBtn.classList.remove('hidden');
-            } else {
-                endBtn.classList.add('hidden');
-            }
+            checkHostButtons(); // Re-checa para mostrar o botão de encerrar se for host
 
             const guide = document.getElementById('locationGuide');
             guide.innerHTML = data.allLocations.map(loc => {
-                const used = data.used.includes(loc);
-                const shouldStrike = !data.isSpy && used;
-                return `<div class="loc-item ${shouldStrike ? 'strikethrough' : ''}">${loc}</div>`;
+                const isUsed = data.used.includes(loc);
+                const showStrike = !data.isSpy && isUsed;
+                return `<div class="loc-item ${showStrike ? 'strikethrough' : ''}">${loc}</div>`;
             }).join('');
         });
 
         socket.on('backToLobby', () => {
             document.getElementById('game-area').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
+            checkHostButtons();
         });
     </script>
 </body>
