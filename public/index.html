@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spyfall Online - Host Edition</title>
+    <title>Spyfall Pro</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0f0f0f; color: #fff; text-align: center; margin: 0; padding: 10px; }
-        .container { max-width: 600px; margin: 20px auto; background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        h1 { color: #e74c3c; letter-spacing: 2px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #fff; text-align: center; margin: 0; padding: 10px; }
+        .container { max-width: 600px; margin: 20px auto; background: #1a1a1a; padding: 25px; border-radius: 15px; border: 1px solid #333; }
+        h1 { color: #e74c3c; }
         input { width: 85%; padding: 12px; margin: 8px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
-        button { width: 90%; padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: 0.2s; }
-        button:hover { background: #c0392b; transform: translateY(-2px); }
+        button { width: 90%; padding: 15px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         .btn-end { background: #444; margin-top: 20px; }
         .hidden { display: none; }
         ul { list-style: none; padding: 0; }
@@ -19,36 +18,34 @@
         #locationGuide { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 250px; overflow-y: auto; background: #111; padding: 15px; margin-top: 20px; border-radius: 10px; border: 1px solid #333; }
         .loc-item { font-size: 12px; color: #888; text-align: left; }
         .strikethrough { text-decoration: line-through; color: #e74c3c; opacity: 0.4; }
-        .role-card { font-size: 1.6em; font-weight: bold; padding: 30px; border: 3px dashed #e74c3c; margin: 20px 0; border-radius: 12px; background: #222; box-shadow: inset 0 0 15px rgba(231, 76, 60, 0.2); }
+        .role-card { font-size: 1.6em; font-weight: bold; padding: 30px; border: 3px dashed #e74c3c; margin: 20px 0; border-radius: 12px; background: #222; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #e74c3c; border-radius: 10px; }
     </style>
 </head>
 <body>
-
     <div class="container">
         <div id="login">
             <h1>SPYFALL</h1>
-            <input type="text" id="username" placeholder="Nome do Agente">
-            <input type="text" id="room" placeholder="Código da Missão">
-            <button onclick="join()">ENTRAR NA REDE</button>
+            <input type="text" id="username" placeholder="Seu Nome">
+            <input type="text" id="room" placeholder="ID da Sala">
+            <button onclick="join()">ENTRAR</button>
         </div>
 
         <div id="lobby" class="hidden">
             <h2>Sala: <span id="roomName" style="color: #e74c3c;"></span></h2>
-            <h3>Agentes na Escuta:</h3>
             <ul id="playerList"></ul>
             <div id="hostControls" class="hidden">
                 <button onclick="start()">INICIAR MISSÃO</button>
             </div>
-            <div id="waitMsg">Aguardando o Host iniciar a partida...</div>
+            <div id="waitMsg">Aguardando o Host...</div>
         </div>
 
         <div id="game-area" class="hidden">
             <div id="roleDisplay" class="role-card"></div>
-            <p style="color: #888; font-size: 14px;">🤫 Mantenha segredo. Analise os locais abaixo:</p>
+            <p id="gameHint" style="color: #888; font-size: 14px;"></p>
             <div id="locationGuide"></div>
-            <button id="endBtn" class="btn-end hidden" onclick="endGame()">ENCERRAR MISSÃO</button>
+            <button id="endBtn" class="btn-end hidden" onclick="endGame()">ENCERRAR PARTIDA</button>
         </div>
     </div>
 
@@ -74,11 +71,9 @@
 
         socket.on('updatePlayers', (data) => {
             amIHost = (socket.id === data.hostId);
-            const list = document.getElementById('playerList');
-            list.innerHTML = data.players.map(p => `
-                <li>🕵️ ${p.username} ${p.id === data.hostId ? '<span class="host-badge">HOST / LÍDER</span>' : ''}</li>
+            document.getElementById('playerList').innerHTML = data.players.map(p => `
+                <li>🕵️ ${p.username} ${p.id === data.hostId ? '<span class="host-badge">HOST</span>' : ''}</li>
             `).join('');
-
             document.getElementById('hostControls').classList.toggle('hidden', !amIHost);
             document.getElementById('waitMsg').classList.toggle('hidden', amIHost);
         });
@@ -91,12 +86,18 @@
             card.innerText = data.role;
             card.style.color = data.isSpy ? "#e74c3c" : "#2ecc71";
 
+            const hint = document.getElementById('gameHint');
+            hint.innerText = data.isSpy ? "Descubra o local sem ser pego!" : "Ache o espião antes que ele descubra onde vocês estão!";
+
             document.getElementById('endBtn').classList.toggle('hidden', !amIHost);
 
+            // LOGICA DA LISTA: Se for espião, NÃO risca nada!
             const guide = document.getElementById('locationGuide');
             guide.innerHTML = data.allLocations.map(loc => {
                 const used = data.used.includes(loc);
-                return `<div class="loc-item ${used ? 'strikethrough' : ''}">${loc}</div>`;
+                // Se for espião, a classe 'strikethrough' nunca é aplicada
+                const shouldStrike = !data.isSpy && used;
+                return `<div class="loc-item ${shouldStrike ? 'strikethrough' : ''}">${loc}</div>`;
             }).join('');
         });
 
