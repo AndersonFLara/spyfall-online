@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spyfall - Versão Final</title>
+    <title>Spyfall Pro - Revelação Final</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0b0b0b; color: #fff; text-align: center; margin: 0; padding: 10px; }
-        .container { max-width: 500px; margin: 20px auto; background: #161616; padding: 25px; border-radius: 12px; border: 1px solid #333; }
-        h1 { color: #ff4757; text-transform: uppercase; }
+        .container { max-width: 500px; margin: 20px auto; background: #161616; padding: 25px; border-radius: 12px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: #ff4757; text-transform: uppercase; letter-spacing: 2px; }
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; }
-        button { width: 90%; padding: 15px; background: #ff4757; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn-end { background: #555 !important; margin-top: 25px; }
+        button { width: 90%; padding: 15px; background: #ff4757; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; }
+        .btn-end { background: #444 !important; margin-top: 25px; }
         .hidden { display: none !important; }
         ul { list-style: none; padding: 0; text-align: left; }
         li { background: #252525; margin: 8px 0; padding: 12px; border-radius: 8px; border-left: 4px solid #ff4757; }
@@ -19,6 +19,8 @@
         .loc-item { font-size: 11px; color: #666; }
         .strikethrough { text-decoration: line-through; color: #ff4757; opacity: 0.5; }
         .role-card { font-size: 1.5em; font-weight: bold; padding: 30px; border: 2px dashed #ff4757; margin: 20px 0; background: #1a1a1a; border-radius: 10px; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #ff4757; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -27,18 +29,19 @@
             <h1>SPYFALL</h1>
             <input type="text" id="username" placeholder="Seu Nome">
             <input type="text" id="room" placeholder="ID da Sala">
-            <button onclick="join()">ENTRAR</button>
+            <button onclick="join()">ENTRAR NA REDE</button>
         </div>
 
         <div id="lobby" class="hidden">
             <h2>SALA: <span id="roomName" style="color: #ff4757;"></span></h2>
             <ul id="playerList"></ul>
-            <button id="startBtn" class="hidden" onclick="start()">INICIAR JOGO</button>
-            <div id="waitMsg">Aguardando o Líder...</div>
+            <button id="startBtn" class="hidden" onclick="start()">INICIAR MISSÃO</button>
+            <div id="waitMsg">Aguardando o Líder da Sala...</div>
         </div>
 
         <div id="game-area" class="hidden">
             <div id="roleDisplay" class="role-card"></div>
+            <p id="gameHint" style="color: #888; font-size: 14px;"></p>
             <div id="locationGuide"></div>
             <button id="endBtn" class="btn-end hidden" onclick="endGame()">ENCERRAR PARTIDA</button>
         </div>
@@ -64,20 +67,16 @@
         function start() { socket.emit('startGame', myRoom); }
         function endGame() { socket.emit('endGame', myRoom); }
 
-        // Servidor confirmando que VOCÊ é o Host
         socket.on('setHost', (status) => {
             amIHost = status;
             checkHostButtons();
         });
 
         socket.on('updatePlayers', (data) => {
-            // Se o host atual saiu e eu sou o novo host (primeiro da lista)
             if (socket.id === data.hostId) amIHost = true;
-            
             document.getElementById('playerList').innerHTML = data.players.map(p => `
                 <li>👤 ${p.username} ${p.id === data.hostId ? '<span class="host-badge">LÍDER</span>' : ''}</li>
             `).join('');
-            
             checkHostButtons();
         });
 
@@ -85,13 +84,12 @@
             const startBtn = document.getElementById('startBtn');
             const waitMsg = document.getElementById('waitMsg');
             const endBtn = document.getElementById('endBtn');
+            const gameVisible = !document.getElementById('game-area').classList.contains('hidden');
 
             if (amIHost) {
-                startBtn.classList.remove('hidden');
+                startBtn.classList.toggle('hidden', gameVisible);
                 waitMsg.classList.add('hidden');
-                if (!document.getElementById('game-area').classList.contains('hidden')) {
-                    endBtn.classList.remove('hidden');
-                }
+                if (gameVisible) endBtn.classList.remove('hidden');
             } else {
                 startBtn.classList.add('hidden');
                 waitMsg.classList.remove('hidden');
@@ -107,7 +105,11 @@
             card.innerText = data.role;
             card.style.color = data.isSpy ? "#ff4757" : "#2ed573";
 
-            checkHostButtons(); // Re-checa para mostrar o botão de encerrar se for host
+            document.getElementById('gameHint').innerText = data.isSpy ? 
+                "Infiltre-se e descubra o local!" : 
+                "Identifique o infiltrado agora!";
+
+            checkHostButtons();
 
             const guide = document.getElementById('locationGuide');
             guide.innerHTML = data.allLocations.map(loc => {
@@ -117,7 +119,10 @@
             }).join('');
         });
 
-        socket.on('backToLobby', () => {
+        socket.on('backToLobby', (spyName) => {
+            // REVELAÇÃO: Mostra quem era o espião antes de fechar a tela de jogo
+            alert("🚨 MISSÃO ENCERRADA!\nO espião infiltrado era: " + spyName);
+            
             document.getElementById('game-area').classList.add('hidden');
             document.getElementById('lobby').classList.remove('hidden');
             checkHostButtons();
