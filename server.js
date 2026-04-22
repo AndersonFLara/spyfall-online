@@ -33,35 +33,40 @@ io.on('connection', (socket) => {
         }
         rooms[roomId].players.push({ id: socket.id, username });
 
-        if (rooms[roomId].hostId === socket.id) {
-            socket.emit('setHost', true);
-        }
-        
         io.to(roomId).emit('updatePlayers', {
             players: rooms[roomId].players,
             hostId: rooms[roomId].hostId
         });
+        
+        if (rooms[roomId].hostId === socket.id) {
+            socket.emit('setHost', true);
+        }
     });
 
     socket.on('startGame', ({ roomId, spyCount }) => {
         const room = rooms[roomId];
         if (room && socket.id === room.hostId && room.players.length >= 3) {
+            console.log(`Iniciando missão na sala ${roomId} com ${spyCount} espiões.`);
+            
             let available = LOCATIONS.filter(loc => !usedLocations.includes(loc));
             if (available.length === 0) { usedLocations = []; available = LOCATIONS; }
 
             const location = available[Math.floor(Math.random() * available.length)];
             usedLocations.push(location);
             
-            // Sorteio de Espiões
             let indices = Array.from({length: room.players.length}, (_, i) => i);
             let spyIndices = [];
-            for(let i = 0; i < spyCount && indices.length > 0; i++) {
+            let countToSelect = Math.min(spyCount, room.players.length - 1);
+            
+            for(let i = 0; i < countToSelect; i++) {
                 let randIndex = Math.floor(Math.random() * indices.length);
                 spyIndices.push(indices.splice(randIndex, 1)[0]);
             }
 
             room.currentSpies = spyIndices.map(i => room.players[i].username);
             room.gameStarted = true;
+
+            io.to(roomId).emit('gameStartingNow'); // Sinal de alerta de início
 
             room.players.forEach((player, index) => {
                 const isSpy = spyIndices.includes(index);
@@ -97,4 +102,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Servidor rodando em ${PORT}`));
+server.listen(PORT, () => console.log(`Rodando em: http://localhost:${PORT}`));
