@@ -46,8 +46,6 @@ io.on('connection', (socket) => {
     socket.on('startGame', ({ roomId, spyCount }) => {
         const room = rooms[roomId];
         if (room && socket.id === room.hostId && room.players.length >= 3) {
-            console.log(`Iniciando missão na sala ${roomId} com ${spyCount} espiões.`);
-            
             let available = LOCATIONS.filter(loc => !usedLocations.includes(loc));
             if (available.length === 0) { usedLocations = []; available = LOCATIONS; }
 
@@ -65,8 +63,6 @@ io.on('connection', (socket) => {
 
             room.currentSpies = spyIndices.map(i => room.players[i].username);
             room.gameStarted = true;
-
-            io.to(roomId).emit('gameStartingNow'); // Sinal de alerta de início
 
             room.players.forEach((player, index) => {
                 const isSpy = spyIndices.includes(index);
@@ -92,14 +88,18 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         for (let r in rooms) {
             rooms[r].players = rooms[r].players.filter(p => p.id !== socket.id);
-            if (rooms[r].hostId === socket.id && rooms[r].players.length > 0) {
+            if (rooms[r].players.length === 0) {
+                delete rooms[r]; // Limpa a sala da memória se não houver ninguém
+            } else if (rooms[r].hostId === socket.id) {
                 rooms[r].hostId = rooms[r].players[0].id;
                 io.to(rooms[r].hostId).emit('setHost', true);
+                io.to(r).emit('updatePlayers', { players: rooms[r].players, hostId: rooms[r].hostId });
+            } else {
+                io.to(r).emit('updatePlayers', { players: rooms[r].players, hostId: rooms[r].hostId });
             }
-            io.to(r).emit('updatePlayers', { players: rooms[r].players, hostId: rooms[r].hostId });
         }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Rodando em: http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Online: ${PORT}`));
