@@ -32,7 +32,12 @@ io.on('connection', (socket) => {
             rooms[roomId] = { players: [], gameStarted: false, hostId: socket.id };
         }
         rooms[roomId].players.push({ id: socket.id, username });
-        io.to(roomId).emit('updatePlayers', { players: rooms[roomId].players, hostId: rooms[roomId].hostId });
+        
+        // Envia para todos na sala a lista atualizada e quem é o Host
+        io.to(roomId).emit('updatePlayers', {
+            players: rooms[roomId].players,
+            hostId: rooms[roomId].hostId
+        });
     });
 
     socket.on('startGame', (roomId) => {
@@ -52,7 +57,8 @@ io.on('connection', (socket) => {
                     role: isSpy ? "🕵️ VOCÊ É O ESPIÃO!" : `📍 LOCAL: ${location}`,
                     isSpy: isSpy,
                     allLocations: LOCATIONS,
-                    used: usedLocations
+                    used: usedLocations,
+                    hostId: room.hostId // Envia o ID do host novamente para garantir
                 });
             });
         }
@@ -72,10 +78,13 @@ io.on('connection', (socket) => {
             if (rooms[r].hostId === socket.id && rooms[r].players.length > 0) {
                 rooms[r].hostId = rooms[r].players[0].id;
             }
-            io.to(r).emit('updatePlayers', { players: rooms[r].players, hostId: rooms[r].hostId });
+            io.to(r).emit('updatePlayers', { 
+                players: rooms[r].players, 
+                hostId: rooms[r].hostId 
+            });
         }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+server.listen(PORT, () => console.log(`Servidor na porta ${PORT}`));
