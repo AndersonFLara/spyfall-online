@@ -6,12 +6,9 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    },
-    // Configurações para manter a conexão viva em redes oscilantes (4G/Wi-Fi distante)
-    pingTimeout: 60000,
+    cors: { origin: "*" },
+    // Configurações para manter a conexão viva mesmo com tela apagada por um tempo
+    pingTimeout: 180000, 
     pingInterval: 25000
 });
 
@@ -34,66 +31,45 @@ const LOCATIONS = [
 let usedLocations = [];
 
 io.on('connection', (socket) => {
-    console.log(`Novo dispositivo conectado: ${socket.id}`);
-
     socket.on('joinRoom', ({ roomId, username }) => {
         const cleanRoom = roomId.toLowerCase().trim();
         const cleanName = username.trim();
-        
         socket.join(cleanRoom);
 
         if (!rooms[cleanRoom]) {
-            rooms[cleanRoom] = { 
-                players: [], 
-                gameStarted: false, 
-                hostId: socket.id, 
-                currentSpies: [],
-                currentLocation: ""
-            };
+            rooms[cleanRoom] = { players: [], gameStarted: false, hostId: socket.id, currentSpies: [] };
         }
 
-        // Remove o jogador se ele já existia (evita duplicados ao reconectar)
+        // Limpa duplicados e atualiza o socket ID do jogador
         rooms[cleanRoom].players = rooms[cleanRoom].players.filter(p => p.username !== cleanName);
-        
-        // Adiciona o novo socket
         rooms[cleanRoom].players.push({ id: socket.id, username: cleanName });
 
-        // Se o Host saiu ou não existe mais, promove o atual
+        // Garante que a sala sempre tenha um Líder ativo
         const hostExists = rooms[cleanRoom].players.some(p => p.id === rooms[cleanRoom].hostId);
-        if (!hostExists) {
-            rooms[cleanRoom].hostId = socket.id;
-        }
+        if (!hostExists) rooms[cleanRoom].hostId = socket.id;
 
-        // Notifica todos na sala sobre a nova lista
         io.to(cleanRoom).emit('updatePlayers', {
             players: rooms[cleanRoom].players,
             hostId: rooms[cleanRoom].hostId
         });
         
-        // Envia sinal privado se ele for o líder
-        if (rooms[cleanRoom].hostId === socket.id) {
-            socket.emit('setHost', true);
-        }
+        if (rooms[cleanRoom].hostId === socket.id) socket.emit('setHost', true);
     });
 
     socket.on('startGame', ({ roomId, spyCount }) => {
         const cleanRoom = roomId.toLowerCase().trim();
         const room = rooms[cleanRoom];
-
         if (room && socket.id === room.hostId && room.players.length >= 3) {
-            // Sorteio do Local
             let available = LOCATIONS.filter(loc => !usedLocations.includes(loc));
             if (available.length === 0) { usedLocations = []; available = LOCATIONS; }
             const location = available[Math.floor(Math.random() * available.length)];
             usedLocations.push(location);
-            room.currentLocation = location;
-
-            // Sorteio dos Espiões
+            
             let indices = Array.from({length: room.players.length}, (_, i) => i);
             let spyIndices = [];
-            let maxSpies = Math.min(spyCount, room.players.length - 1);
+            let countToSelect = Math.min(spyCount, room.players.length - 1);
             
-            for(let i = 0; i < maxSpies; i++) {
+            for(let i = 0; i < countToSelect; i++) {
                 let randIndex = Math.floor(Math.random() * indices.length);
                 spyIndices.push(indices.splice(randIndex, 1)[0]);
             }
@@ -101,7 +77,6 @@ io.on('connection', (socket) => {
             room.currentSpies = spyIndices.map(i => room.players[i].username);
             room.gameStarted = true;
 
-            // Envia as funções individualmente
             room.players.forEach((player, index) => {
                 const isSpy = spyIndices.includes(index);
                 io.to(player.id).emit('receiveRole', {
@@ -118,40 +93,26 @@ io.on('connection', (socket) => {
         const cleanRoom = roomId.toLowerCase().trim();
         const room = rooms[cleanRoom];
         if (room && socket.id === room.hostId) {
-            const spyNames = room.currentSpies.join(" e ");
+            io.to(cleanRoom).emit('backToLobby', room.currentSpies.join(" e "));
             room.gameStarted = false;
-            io.to(cleanRoom).emit('backToLobby', spyNames);
         }
     });
 
     socket.on('disconnect', () => {
         for (let r in rooms) {
-            const playerIndex = rooms[r].players.findIndex(p => p.id === socket.id);
-            if (playerIndex !== -1) {
-                rooms[r].players.splice(playerIndex, 1);
-                
-                if (rooms[r].players.length === 0) {
-                    delete rooms[r];
-                } else {
-                    // Se o líder saiu, passa a coroa para o próximo
-                    if (rooms[r].hostId === socket.id) {
-                        rooms[r].hostId = rooms[r].players[0].id;
-                        io.to(rooms[r].hostId).emit('setHost', true);
-                    }
-                    io.to(r).emit('updatePlayers', { 
-                        players: rooms[r].players, 
-                        hostId: rooms[r].hostId 
-                    });
+            rooms[r].players = rooms[r].players.filter(p => p.id !== socket.id);
+            if (rooms[r].players.length === 0) {
+                delete rooms[r];
+            } else {
+                if (rooms[r].hostId === socket.id) {
+                    rooms[r].hostId = rooms[r].players[0].id;
+                    io.to(rooms[r].hostId).emit('setHost', true);
                 }
+                io.to(r).emit('updatePlayers', { players: rooms[r].players, hostId: rooms[r].hostId });
             }
         }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`=================================`);
-    console.log(`Servidor Spyfall Rodando na porta ${PORT}`);
-    console.log(`HelpCell & SPM Estruturas`);
-    console.log(`=================================`);
-});
+server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
